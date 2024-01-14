@@ -7,6 +7,7 @@ import { UserType } from "../UserContext";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import User from "../components/User";
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -50,7 +51,11 @@ const HomeScreen = () => {
 
   return (
     <View>
-      <Text>HomeScreen</Text>
+      <View style={{ padding: 10 }}>
+        {users.map((item) => {
+          return <User key={item._id} item={item} />;
+        })}
+      </View>
     </View>
   );
 };
