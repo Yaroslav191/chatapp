@@ -1,12 +1,54 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import React, { useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { KeyboardAvoidingView, TextInput } from "react-native-web";
 import { useNavigation } from "@react-navigation/native";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { UserType } from "../UserContext";
 
 const LoginScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigation = useNavigation();
+  const { userId, setUserId } = useContext(UserType);
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem("authToken");
+
+        if (token) {
+          navigation.replace("Home");
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    checkLoginStatus();
+  }, []);
+
+  const handleLogin = () => {
+    const user = {
+      email: email,
+      password: password,
+    };
+
+    axios
+      .post("http://localhost:8000/login", user)
+      .then((response) => {
+        console.log(response);
+        const token = response.data.token;
+        AsyncStorage.setItem("authToken", token);
+
+        navigation.replace("Home");
+
+        setEmail("");
+        setPassword("");
+      })
+      .catch((error) => {
+        console.log("Login Error", error);
+      });
+  };
 
   return (
     <View
@@ -70,6 +112,7 @@ const LoginScreen = () => {
             />
           </View>
           <Pressable
+            onPress={handleLogin}
             style={{
               marginTop: 30,
               width: 200,
