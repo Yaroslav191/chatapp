@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 import React, { useContext, useEffect, useState } from "react";
 import { UserType } from "../UserContext";
 import axios from "axios";
+import FriendRequest from "../components/FriendRequest";
 
 const FriendsScreen = () => {
   const { userId, setUserId } = useContext(UserType);
@@ -32,8 +33,18 @@ const FriendsScreen = () => {
   console.log(requests);
 
   return (
-    <View>
-      <Text>FriendsScreen</Text>
+    <View style={{ paddingHorizontal: 5 }}>
+      {requests.legth > 0 && <Text>You Friend Requests</Text>}
+      {requests.map((item, index) => {
+        return (
+          <FriendRequest
+            key={index}
+            item={item}
+            requests={requests}
+            setRequests={setRequests}
+          />
+        );
+      })}
     </View>
   );
 };
