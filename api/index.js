@@ -32,6 +32,7 @@ app.listen(port, () => {
 
 const User = require("./models/user");
 const Message = require("./models/message");
+const multer = require("multer");
 
 //function to create a token for the user
 const createToken = (userId) => {
@@ -146,4 +147,124 @@ app.get("/requestedFriends/:userId", async (req, res) => {
       console.log(error);
       res.status(500).json({ message: "There is an error" });
     });
+});
+
+//endpoint to accept a friend-request of particular person
+app.post("/accept", async (req, res) => {
+  try {
+    const { senderId, recepientId } = req.body;
+
+    console.log(senderId, recepientId);
+
+    //retrieve the documents of sender and the recipient
+    const sender = await User.findById(senderId);
+    const recipient = await User.findById(recepientId);
+
+    sender.friends.push(recepientId);
+    recipient.friends.push(senderId);
+
+    recipient.friendsRequests = recipient.friendsRequests.filter((item) => {
+      return item.toString() !== senderId.toString();
+    });
+
+    sender.friendsRequests = sender.friendsRequests.filter((item) => {
+      return item.toString() !== recipient.toString();
+    });
+
+    await sender.save();
+    await recipient.save();
+
+    res.status(200).json({ message: "Friend Request accepted successfully" });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+//endpoint to access all the friends of the logged in user!
+app.get("/accepted-freinds/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).populate(
+      "friends",
+      "name email image"
+    );
+
+    const acceptedFriends = user.friends;
+    res.json(acceptedFriends);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// Configure multer for handling file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "files/"); // Specify the desired destination folder
+  },
+  filename: function (req, file, cb) {
+    // Generate a unique filename for the uploaded file
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage: storage });
+
+//endpoint to post Messages and store it in the backend
+
+app.post("/messages", upload.single("imageFile"), async (req, res) => {
+  try {
+    const { senderId, recepientId, messageType, messageText } = req.body;
+
+    const newMessage = new Message({
+      senderId,
+      recepientId,
+      messageType,
+      messageText,
+      timeStamp: new Date(),
+      imageUrl: messageType === "image",
+    });
+
+    res.status(200)({ message: "Message sent Successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+//endpoint to get the userDetails to design the chat Room header
+app.get("user/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    //fetch the user data from the user ID
+    const recepientId = await User.findById(userId);
+
+    res.json(recepientId);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+//endpoint to fetch the messages between two users in the chat room
+app.get("/messages/:senderId/:recepientId", async (req, res) => {
+  try {
+    const { senderId, recepientId } = req.params;
+    const messages = await Message.findOne({
+      $or: [
+        { senderId: senderId, recipientId: recepientId },
+        {
+          senderId: recepientId,
+          recepientId: senderId,
+        },
+      ],
+    }).populate("senderId", "_id name");
+
+    res.json(messages);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 });
