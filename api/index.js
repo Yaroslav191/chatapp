@@ -221,20 +221,21 @@ app.post("/messages", upload.single("imageFile"), async (req, res) => {
       senderId,
       recepientId,
       messageType,
-      messageText,
-      timeStamp: new Date(),
-      imageUrl: messageType === "image",
+      message: messageText,
+      timestamp: new Date(),
+      imageUrl: messageType === "image" ? req.file.path : null,
     });
 
-    res.status(200)({ message: "Message sent Successfully" });
+    await newMessage.save();
+    res.status(200).json({ message: "Message sent Successfully" });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 //endpoint to get the userDetails to design the chat Room header
-app.get("user/:userId", async (req, res) => {
+app.get("/user/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -248,23 +249,23 @@ app.get("user/:userId", async (req, res) => {
   }
 });
 
-//endpoint to fetch the messages between two users in the chat room
+//endpoint to fetch the messages between two users in the chatRoom
 app.get("/messages/:senderId/:recepientId", async (req, res) => {
   try {
     const { senderId, recepientId } = req.params;
-    const messages = await Message.findOne({
+
+    const messages = await Message.find({
       $or: [
-        { senderId: senderId, recipientId: recepientId },
-        {
-          senderId: recepientId,
-          recepientId: senderId,
-        },
+        { senderId: senderId, recepientId: recepientId },
+        { senderId: recepientId, recepientId: senderId },
       ],
     }).populate("senderId", "_id name");
+
+    console.log(messages);
 
     res.json(messages);
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });

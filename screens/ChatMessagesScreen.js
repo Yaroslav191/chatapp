@@ -6,22 +6,96 @@ import {
   KeyboardAvoidingView,
   TextInput,
   Pressable,
+  Image,
 } from "react-native";
-import React, { useState, useContext, useLayoutEffect } from "react";
+import React, { useState, useContext, useLayoutEffect, useEffect } from "react";
 import { Entypo } from "@expo/vector-icons";
 import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import EmojiSelector from "react-native-emoji-selector";
 import { UserType } from "../UserContext";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
 const ChatMessagesScreen = () => {
   const [selectedImage, setSelectedImage] = useState("");
+  const [recepientData, setRecipientData] = useState("");
+  const [messages, setMessages] = useState([]);
   const navigation = useNavigation();
   const { userId, setUserId } = useContext(UserType);
   const [showEmojiSelector, setEmojiSelector] = useState(false);
   const [message, setMessage] = useState("");
   const route = useRoute();
   const { recepientId } = route.params;
+
+  const fetchMessages = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/messages/${userId}/${recepientId}`
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessages(data);
+      } else {
+        console.log("error showing messags", response.status.message);
+      }
+    } catch (error) {
+      console.log("error fetching messages", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: "",
+      headerLeft: () => {
+        return (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color="black"
+              onPress={() => navigation.goBack()}
+            />
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Image
+                source={{ uri: recepientData?.image }}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  color: "black",
+                  resizeMode: "cover",
+                }}
+              />
+              <Text style={{ marginLeft: 5, fontSize: 15, fontWeight: "bold" }}>
+                {recepientData?.name}
+              </Text>
+            </View>
+          </View>
+        );
+      },
+    });
+  }, [recepientData]);
+
+  useEffect(() => {
+    const fetchRecepientData = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8000/user/${recepientId}`
+        );
+
+        const data = await response.json();
+        setRecipientData(data);
+      } catch (error) {
+        console.log("error retrieving details", error);
+      }
+    };
+    fetchRecepientData();
+  }, []);
 
   const handleEmojiPress = () => {
     setEmojiSelector(!showEmojiSelector);
@@ -60,15 +134,39 @@ const ChatMessagesScreen = () => {
     }
   };
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: "",
-    });
-  }, []);
+  console.log(messages);
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: "#F0F0F0" }}>
-      <ScrollView></ScrollView>
+      <ScrollView>
+        {messages.map((item, index) => {
+          return (
+            <Pressable
+              key={index}
+              style={
+                [item?.senderId?._id === userId]
+                  ? {
+                      alignItems: "flex-end",
+                      backgroundColor: "#DCF8C6",
+                      padding: 8,
+                      maxWidth: "60%",
+                      borderRadius: 7,
+                      margin: 10,
+                    }
+                  : {
+                      alignSelf: "flex-start",
+                      backgroundColor: "white",
+                      padding: 8,
+                      margin: 10,
+                      borderRadius: 7,
+                      maxWidth: "60%",
+                    }
+              }>
+              <Text style={{ fontSize: 13 }}>{item?.message}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
       <View
         style={{
           flexDirection: "row",
