@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import EmojiSelector from "react-native-emoji-selector";
 import { UserType } from "../UserContext";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
 
 const ChatMessagesScreen = () => {
   const [selectedImage, setSelectedImage] = useState("");
@@ -128,43 +129,75 @@ const ChatMessagesScreen = () => {
       if (response.ok) {
         setMessage("");
         setSelectedImage("");
+
+        fetchMessages();
       }
     } catch (error) {
       console.log("error sending the message", error);
     }
   };
 
-  console.log(messages);
+  const formatTime = (time) => {
+    const options = { hour: "numeric", minute: "numeric" };
+    return new Date(time).toLocaleString("en-US", options);
+  };
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+    console.log(result);
+
+    if (!result.canceled) {
+      handleSend("image", result.uri);
+    }
+  };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: "#F0F0F0" }}>
       <ScrollView>
         {messages.map((item, index) => {
-          return (
-            <Pressable
-              key={index}
-              style={
-                [item?.senderId?._id === userId]
-                  ? {
-                      alignItems: "flex-end",
-                      backgroundColor: "#DCF8C6",
-                      padding: 8,
-                      maxWidth: "60%",
-                      borderRadius: 7,
-                      margin: 10,
-                    }
-                  : {
-                      alignSelf: "flex-start",
-                      backgroundColor: "white",
-                      padding: 8,
-                      margin: 10,
-                      borderRadius: 7,
-                      maxWidth: "60%",
-                    }
-              }>
-              <Text style={{ fontSize: 13 }}>{item?.message}</Text>
-            </Pressable>
-          );
+          if (item.messageType === "text") {
+            return (
+              <Pressable
+                key={index}
+                style={
+                  [item?.senderId?._id === userId]
+                    ? {
+                        alignSelf: "flex-end",
+                        backgroundColor: "#DCF8C6",
+                        padding: 8,
+                        maxWidth: "60%",
+                        borderRadius: 7,
+                        margin: 10,
+                      }
+                    : {
+                        alignSelf: "flex-start",
+                        backgroundColor: "white",
+                        padding: 8,
+                        margin: 10,
+                        borderRadius: 7,
+                        maxWidth: "60%",
+                      }
+                }>
+                <Text style={{ fontSize: 13, textAlign: "left" }}>
+                  {item?.message}
+                </Text>
+                <Text
+                  style={{
+                    textAlign: "right",
+                    fontSize: 9,
+                    color: "gray",
+                    marginTop: 5,
+                  }}>
+                  {formatTime(item.timeStamp)}
+                </Text>
+              </Pressable>
+            );
+          }
         })}
       </ScrollView>
       <View
@@ -206,6 +239,7 @@ const ChatMessagesScreen = () => {
             marginHorizontal: 8,
           }}>
           <Entypo
+            onPress={pickImage}
             name="camera"
             style={{ marginLeft: 5 }}
             size={24}
