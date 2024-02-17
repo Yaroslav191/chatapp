@@ -154,8 +154,6 @@ app.post("/accept", async (req, res) => {
   try {
     const { senderId, recepientId } = req.body;
 
-    console.log(senderId, recepientId);
-
     //retrieve the documents of sender and the recipient
     const sender = await User.findById(senderId);
     const recipient = await User.findById(recepientId);
@@ -212,10 +210,16 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 //endpoint to post Messages and store it in the backend
-
 app.post("/messages", upload.single("imageFile"), async (req, res) => {
   try {
     const { senderId, recepientId, messageType, messageText } = req.body;
+
+    console.log(JSON.stringify(req.file));
+
+    let imageUrl = null;
+    if (messageType === "image" && req.file) {
+      imageUrl = req.file.path;
+    }
 
     const newMessage = new Message({
       senderId,
@@ -223,14 +227,14 @@ app.post("/messages", upload.single("imageFile"), async (req, res) => {
       messageType,
       message: messageText,
       timestamp: new Date(),
-      imageUrl: messageType === "image" ? req.file.path : null,
+      imageUrl: imageUrl,
     });
 
     await newMessage.save();
-    res.status(200).json({ message: "Message sent Successfully" });
+    res.status(200).json({ message: "Message sent successfully" });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error sending message:", error);
+    res.status(500).json({ error: "Failed to send message" });
   }
 });
 
@@ -260,8 +264,6 @@ app.get("/messages/:senderId/:recepientId", async (req, res) => {
         { senderId: recepientId, recepientId: senderId },
       ],
     }).populate("senderId", "_id name");
-
-    console.log(messages);
 
     res.json(messages);
   } catch (error) {

@@ -152,7 +152,7 @@ const ChatMessagesScreen = () => {
     console.log(result);
 
     if (!result.canceled) {
-      handleSend("image", result.uri);
+      handleSend("image", result.assets[0].uri);
     }
   };
 
